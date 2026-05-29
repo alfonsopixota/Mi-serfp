@@ -2,6 +2,7 @@ import express from "express";
 import path from "path";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
+import { buildGeminiContents, normalizeChatHistory } from "./src/lib/chat";
 
 dotenv.config();
 
@@ -59,26 +60,7 @@ app.post("/api/chat", async (req, res) => {
       "Ofrece siempre consejos prácticos sobre asignaturas difíciles, el paso a la universidad, nivel de empleabilidad real y salarios promedio iniciales en España (aprox. 14.000€-18.000€ brutos anuales para principiantes, escalando según experiencia). " +
       "Sé directo, cercano, realista y muy útil. Si te preguntan algo no relacionado con la FP, redirígelos amablemente a la orientación vocacional o FP.";
 
-    // Convert history to API structures
-    const contents: any[] = [];
-    if (Array.isArray(history)) {
-      history.slice(-20).forEach((turn: any) => {
-        if (!turn || typeof turn.text !== "string" || !turn.text.trim()) {
-          return;
-        }
-
-        contents.push({
-          role: turn.sender === "user" ? "user" : "model",
-          parts: [{ text: turn.text }],
-        });
-      });
-    }
-
-    // Append current user message
-    contents.push({
-      role: "user",
-      parts: [{ text: message }],
-    });
+    const contents = buildGeminiContents(normalizeChatHistory(history), message);
 
     const response = await ai.models.generateContent({
       model: "gemini-3.5-flash",
