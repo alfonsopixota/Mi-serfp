@@ -4,9 +4,10 @@ interface NavigationProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   testimonialCount: number;
+  cycleCount: number;
 }
 
-export default function Navigation({ activeTab, setActiveTab, testimonialCount }: NavigationProps) {
+export default function Navigation({ activeTab, setActiveTab, testimonialCount, cycleCount }: NavigationProps) {
   const menuItems = [
     { id: "home", label: "Descubrir FP", icon: Compass },
     { id: "testimonials", label: "Testimonios Reales", icon: MessageSquareCode, badge: testimonialCount },
@@ -17,7 +18,7 @@ export default function Navigation({ activeTab, setActiveTab, testimonialCount }
   ];
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-slate-200/90 bg-white/95 backdrop-blur-md shadow-sm">
+    <header className="sticky top-0 z-40 w-full border-b border-slate-200/90 bg-white/90 backdrop-blur-md shadow-sm">
       <div className="mx-auto flex max-w-7xl h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Brand Logo and Slogan */}
         <div 
@@ -47,12 +48,12 @@ export default function Navigation({ activeTab, setActiveTab, testimonialCount }
                 key={item.id}
                 id={`tab-${item.id}`}
                 onClick={() => setActiveTab(item.id)}
-                className={`relative flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                className={`relative flex items-center gap-2 px-3.5 py-2.5 rounded-full text-sm font-medium transition-all duration-200 border ${
                   isActive
-                    ? "bg-slate-900 text-white shadow-sm"
+                    ? "bg-slate-900 text-white shadow-sm border-slate-900"
                     : item.highlight
-                    ? "text-blue-600 hover:bg-blue-50/50 hover:text-blue-700"
-                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                    ? "text-blue-700 hover:bg-blue-50/70 hover:text-blue-800 border-transparent"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100 border-transparent"
                 }`}
               >
                 <Icon className={`h-4 w-4 ${isActive ? "text-white" : item.highlight ? "text-blue-600" : "text-slate-500"}`} />
@@ -75,9 +76,9 @@ export default function Navigation({ activeTab, setActiveTab, testimonialCount }
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
               </span>
-              <span className="text-[12px] font-bold text-slate-800">Comunidad Activa</span>
+              <span className="text-[12px] font-bold text-slate-800">Catálogo vivo</span>
             </div>
-            <p className="text-[10px] text-slate-500">Meta 12 Meses: 100k</p>
+            <p className="text-[10px] text-slate-500">{cycleCount} ciclos · {testimonialCount} testimonios</p>
           </div>
         </div>
       </div>
@@ -93,10 +94,10 @@ export default function Navigation({ activeTab, setActiveTab, testimonialCount }
                 key={item.id}
                 id={`mobile-tab-${item.id}`}
                 onClick={() => setActiveTab(item.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all border ${
                   isActive
-                    ? "bg-slate-900 text-white"
-                    : "text-slate-600 hover:bg-slate-200 hover:text-slate-900"
+                    ? "bg-slate-900 text-white border-slate-900"
+                    : "text-slate-600 hover:bg-slate-200 hover:text-slate-900 border-transparent"
                 }`}
               >
                 <Icon className="h-3.5 w-3.5" />
