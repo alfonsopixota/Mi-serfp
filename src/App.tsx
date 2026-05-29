@@ -1,9 +1,14 @@
 import { useState, useEffect } from "react";
-import { MessageSquareCode, ShieldCheck, HelpCircle, ArrowRight, Star } from "lucide-react";
 
 // Types and preloaded dataset
 import { PRELOADED_CYCLES, PRELOADED_TESTIMONIALS } from "./data";
 import { FpCycle, Testimonial } from "./types";
+import {
+  isValidCycleArray,
+  isValidTestimonialArray,
+  normalizeBackupPayload,
+} from "./lib/validation";
+import { parseStoredJson } from "./lib/storage";
 
 // Modular Subviews
 import Navigation from "./components/Navigation";
@@ -15,18 +20,6 @@ import BlogSection from "./components/BlogSection";
 import ControlCenterSection from "./components/ControlCenterSection";
 import AIAdvisor from "./components/AIAdvisor";
 
-function safeParseStoredValue<T>(storageValue: string | null, fallback: T): T {
-  if (!storageValue) {
-    return fallback;
-  }
-
-  try {
-    return JSON.parse(storageValue) as T;
-  } catch {
-    return fallback;
-  }
-}
-
 export default function App() {
   // Navigation active tab
   const [activeTab, setActiveTab] = useState<string>("home");
@@ -36,11 +29,11 @@ export default function App() {
 
   // Database states persisting in local storage
   const [cycles, setCycles] = useState<FpCycle[]>(() => {
-    return safeParseStoredValue(localStorage.getItem("serfp_cycles"), PRELOADED_CYCLES);
+    return parseStoredJson(localStorage.getItem("serfp_cycles"), isValidCycleArray, PRELOADED_CYCLES);
   });
 
   const [testimonials, setTestimonials] = useState<Testimonial[]>(() => {
-    return safeParseStoredValue(localStorage.getItem("serfp_testimonials"), PRELOADED_TESTIMONIALS);
+    return parseStoredJson(localStorage.getItem("serfp_testimonials"), isValidTestimonialArray, PRELOADED_TESTIMONIALS);
   });
 
   // Persist back changes
@@ -96,17 +89,13 @@ export default function App() {
   // Port JSON Backup Restore
   const handleImportBackup = (importedJsonStr: string) => {
     try {
-      const data = JSON.parse(importedJsonStr) as {
-        cycles?: unknown;
-        testimonials?: unknown;
-      };
-
-      if (!Array.isArray(data.cycles) || !Array.isArray(data.testimonials)) {
+      const data = normalizeBackupPayload(JSON.parse(importedJsonStr));
+      if (!data) {
         throw new Error("Formato del backup inválido: debe contener las arrays de 'cycles' y 'testimonials'.");
       }
 
-      setCycles(data.cycles as FpCycle[]);
-      setTestimonials(data.testimonials as Testimonial[]);
+      setCycles(data.cycles);
+      setTestimonials(data.testimonials);
     } catch (error) {
       const message = error instanceof Error ? error.message : "No se pudo importar el backup.";
       throw new Error(message);
@@ -140,6 +129,7 @@ export default function App() {
           activeTab={activeTab} 
           setActiveTab={setActiveTab} 
           testimonialCount={testimonials.filter(t => t.approved).length}
+          cycleCount={cycles.length}
         />
 
         {/* Global Body Container */}
