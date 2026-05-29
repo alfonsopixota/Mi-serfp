@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Settings, ShieldCheck, Database, Calendar, Trash2, Edit2, Play, RefreshCw, BarChart2, Plus, Users, GraduationCap, Download, Upload } from "lucide-react";
 import { Testimonial, FpCycle, FpLevel } from "../types";
+import { normalizeBackupPayload } from "../lib/validation";
 
 interface ControlCenterSectionProps {
   testimonials: Testimonial[];
@@ -115,6 +116,10 @@ export default function ControlCenterSection({
     e.preventDefault();
     try {
       if (!importText) return;
+      const parsed = JSON.parse(importText);
+      if (!normalizeBackupPayload(parsed)) {
+        throw new Error("El backup debe incluir arrays válidas de 'cycles' y 'testimonials'.");
+      }
       onImportBackup(importText);
       setImportStatus("Importación completada con éxito. Base de datos sincronizada.");
       setImportText("");
@@ -372,12 +377,12 @@ export default function ControlCenterSection({
               {/* Import box */}
               <form onSubmit={handleImportData} className="space-y-2 border-t border-slate-200 pt-3">
                 <span className="text-[9px] font-bold text-slate-400 uppercase font-mono block">Importar copia JSON</span>
-                <input
-                  type="text"
+                <textarea
                   placeholder="Pega las líneas JSON del backup..."
                   value={importText}
                   onChange={e => setImportText(e.target.value)}
-                  className="w-full text-[10px] p-2 bg-white border border-slate-200 rounded focus:outline-none"
+                  rows={5}
+                  className="w-full text-[10px] p-2 bg-white border border-slate-200 rounded focus:outline-none resize-y"
                 />
                 <button
                   type="submit"
