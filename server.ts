@@ -6,7 +6,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 // Initialize Google GenAI client if key is available
 let ai: GoogleGenAI | null = null;
@@ -29,14 +29,14 @@ try {
   console.error("Error initializing GoogleGenAI client:", error);
 }
 
-app.use(express.json());
+app.use(express.json({ limit: "64kb" }));
 
 // API: Handle Chat with SerFP AI Orientador
 app.post("/api/chat", async (req, res) => {
   try {
     const { message, history } = req.body;
 
-    if (!message) {
+    if (typeof message !== "string" || !message.trim()) {
       return res.status(400).json({ error: "El mensaje es obligatorio" });
     }
 
@@ -48,7 +48,7 @@ app.post("/api/chat", async (req, res) => {
     }
 
     // Prepare system instructions for realistic, zero-hype, professional FP advice in Spain.
-    const systemInstruction = 
+    const systemInstruction =
       "Eres 'SerFP AI', el orientador neutral e independiente de Formación Profesional (FP) en España. " +
       "Tu propósito es dar respuestas transparentes, claras, realistas y libres de humo (sin exagerar salarios, sin promocionar centros privados ni vender falsas expectativas). " +
       "Conoces a fondo el sistema educativo español: " +
@@ -61,8 +61,12 @@ app.post("/api/chat", async (req, res) => {
 
     // Convert history to API structures
     const contents: any[] = [];
-    if (history && Array.isArray(history)) {
-      history.forEach((turn: any) => {
+    if (Array.isArray(history)) {
+      history.slice(-20).forEach((turn: any) => {
+        if (!turn || typeof turn.text !== "string" || !turn.text.trim()) {
+          return;
+        }
+
         contents.push({
           role: turn.sender === "user" ? "user" : "model",
           parts: [{ text: turn.text }],
@@ -87,14 +91,11 @@ app.post("/api/chat", async (req, res) => {
 
     const replyText = response.text || "Lo siento, no he podido procesar tu consulta de orientación en este momento.";
     return res.json({ text: replyText, isFallback: false });
-
   } catch (error: any) {
     console.error("Error invoking Gemini on server:", error);
-    // Graceful fallback on API error
-    const fallbackText = "Hola, he tenido un pequeño percance para conectar con los servidores de inteligencia artificial en este momento. Sin embargo, como orientador te recomiendo comparar los grados de Informática (DAM/DAW/ASIR) si te interesa la tecnología, o Sanidad (Higiene bucodental/Enfermería) por su alta empleabilidad. ¿Qué sector te llama más la atención?";
-    return res.json({ 
-      text: fallbackText + `\n\n(Detalle técnico del error: ${error?.message || error})`, 
-      isFallback: true 
+    return res.status(502).json({
+      text: "No he podido generar una respuesta ahora mismo. Inténtalo de nuevo en unos segundos.",
+      isFallback: true,
     });
   }
 });
