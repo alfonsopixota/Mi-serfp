@@ -35,7 +35,7 @@ export default function AIAdvisor({ initialPrompt, onClosePrompt }: AIAdvisorPro
       sendQuery(initialPrompt);
       onClosePrompt(); // reset parent state
     }
-  }, [initialPrompt]);
+  }, [initialPrompt, onClosePrompt]);
 
   // Handle scroll to bottom
   useEffect(() => {
