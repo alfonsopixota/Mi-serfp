@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { GraduationCap, ArrowRight, CheckSquare, Plus, Trash2, HelpCircle, Shuffle, HeartCrack, Bookmark } from "lucide-react";
 import { FpCycle, ChecklistItem } from "../types";
 import { PRELOADED_CHECKLISTS } from "../data";
+import { isValidChecklistArray } from "../lib/validation";
+import { parseStoredJson } from "../lib/storage";
 
 interface CompareSectionProps {
   cycles: FpCycle[];
@@ -14,8 +16,7 @@ export default function CompareSection({ cycles }: CompareSectionProps) {
 
   // Checklist items state (persisting locally)
   const [checklist, setChecklist] = useState<ChecklistItem[]>(() => {
-    const saved = localStorage.getItem("serfp_user_checklist");
-    return saved ? JSON.parse(saved) : PRELOADED_CHECKLISTS;
+    return parseStoredJson(localStorage.getItem("serfp_user_checklist"), isValidChecklistArray, PRELOADED_CHECKLISTS);
   });
 
   // Custom checklist task inputs
