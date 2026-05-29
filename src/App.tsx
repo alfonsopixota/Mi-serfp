@@ -15,6 +15,18 @@ import BlogSection from "./components/BlogSection";
 import ControlCenterSection from "./components/ControlCenterSection";
 import AIAdvisor from "./components/AIAdvisor";
 
+function safeParseStoredValue<T>(storageValue: string | null, fallback: T): T {
+  if (!storageValue) {
+    return fallback;
+  }
+
+  try {
+    return JSON.parse(storageValue) as T;
+  } catch {
+    return fallback;
+  }
+}
+
 export default function App() {
   // Navigation active tab
   const [activeTab, setActiveTab] = useState<string>("home");
@@ -24,13 +36,11 @@ export default function App() {
 
   // Database states persisting in local storage
   const [cycles, setCycles] = useState<FpCycle[]>(() => {
-    const saved = localStorage.getItem("serfp_cycles");
-    return saved ? JSON.parse(saved) : PRELOADED_CYCLES;
+    return safeParseStoredValue(localStorage.getItem("serfp_cycles"), PRELOADED_CYCLES);
   });
 
   const [testimonials, setTestimonials] = useState<Testimonial[]>(() => {
-    const saved = localStorage.getItem("serfp_testimonials");
-    return saved ? JSON.parse(saved) : PRELOADED_TESTIMONIALS;
+    return safeParseStoredValue(localStorage.getItem("serfp_testimonials"), PRELOADED_TESTIMONIALS);
   });
 
   // Persist back changes
@@ -85,12 +95,21 @@ export default function App() {
 
   // Port JSON Backup Restore
   const handleImportBackup = (importedJsonStr: string) => {
-    const data = JSON.parse(importedJsonStr);
-    if (Array.isArray(data.cycles) && Array.isArray(data.testimonials)) {
-      setCycles(data.cycles);
-      setTestimonials(data.testimonials);
-    } else {
-      throw new Error("Formato del backup inválido: debe contener las arrays de 'cycles' y 'testimonials'.");
+    try {
+      const data = JSON.parse(importedJsonStr) as {
+        cycles?: unknown;
+        testimonials?: unknown;
+      };
+
+      if (!Array.isArray(data.cycles) || !Array.isArray(data.testimonials)) {
+        throw new Error("Formato del backup inválido: debe contener las arrays de 'cycles' y 'testimonials'.");
+      }
+
+      setCycles(data.cycles as FpCycle[]);
+      setTestimonials(data.testimonials as Testimonial[]);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No se pudo importar el backup.";
+      throw new Error(message);
     }
   };
 
