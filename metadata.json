@@ -1,0 +1,6 @@
+{
+  "name": "SerFP",
+  "description": "Comunidad neutral y libre de humo sobre la Formación Profesional en España. Orientación, testimonios reales, comparativas y salidas profesionales y de empleabilidad.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
