@@ -17,6 +17,12 @@ export default function HomeSection({ cycles, onSelectCycle, onAskAI }: HomeSect
 
   // Myth carousel state
   const [activeMythIndex, setActiveMythIndex] = useState(0);
+  const popularCycles = cycles.filter((cycle) => cycle.isPopular);
+  const averageEmployability = Math.round(
+    cycles.reduce((sum, cycle) => sum + cycle.employabilityRate, 0) / Math.max(cycles.length, 1)
+  );
+  const topSalaryCycle = [...cycles].sort((a, b) => b.avgStartingSalary - a.avgStartingSalary)[0];
+  const topSalaryMonthly = topSalaryCycle ? Math.round(topSalaryCycle.avgStartingSalary / 14) : 0;
 
   const mythsList = [
     {
@@ -39,8 +45,11 @@ export default function HomeSection({ cycles, onSelectCycle, onAskAI }: HomeSect
   };
 
   const handleLevelSelection = (level: string) => {
+    if (!selectedInterest) {
+      return;
+    }
     setSelectedLevel(level);
-    calculateQuizResult(selectedInterest!, level);
+    calculateQuizResult(selectedInterest, level);
     setQuizStep(2);
   };
 
@@ -106,6 +115,24 @@ export default function HomeSection({ cycles, onSelectCycle, onAskAI }: HomeSect
               Test de Orientación Rápido
             </button>
           </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4">
+            <div className="rounded-xl border border-white/10 bg-white/5 p-3 backdrop-blur-sm">
+              <span className="block text-[10px] uppercase tracking-[0.2em] text-blue-200">Ciclos visibles</span>
+              <p className="mt-1 text-2xl font-black">{cycles.length}</p>
+              <p className="text-[11px] text-slate-300">Catálogo base + aportes manuales</p>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/5 p-3 backdrop-blur-sm">
+              <span className="block text-[10px] uppercase tracking-[0.2em] text-blue-200">Empleabilidad media</span>
+              <p className="mt-1 text-2xl font-black">{averageEmployability}%</p>
+              <p className="text-[11px] text-slate-300">Datos orientativos, no promesas</p>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/5 p-3 backdrop-blur-sm">
+              <span className="block text-[10px] uppercase tracking-[0.2em] text-blue-200">Top salario</span>
+              <p className="mt-1 text-2xl font-black">{topSalaryMonthly}€/m</p>
+              <p className="text-[11px] text-slate-300">{topSalaryCycle?.code ?? "FP"} en bruto estimado</p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -116,8 +143,8 @@ export default function HomeSection({ cycles, onSelectCycle, onAskAI }: HomeSect
             <BadgeCheck className="h-6 w-6" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-slate-900">0% Enlaces de Afiliación</h3>
-            <p className="text-xs text-slate-500">Neutralidad absoluta. No ganamos comisión de ningún centro de formación.</p>
+            <h3 className="text-sm font-bold text-slate-900">Cero Afiliación</h3>
+            <p className="text-xs text-slate-500">No hay publicidad oculta ni recomendación comprada por centros privados.</p>
           </div>
         </div>
         <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm flex gap-4 items-center">
@@ -126,7 +153,7 @@ export default function HomeSection({ cycles, onSelectCycle, onAskAI }: HomeSect
           </div>
           <div>
             <h3 className="text-sm font-bold text-slate-900">Testimonios Verificados</h3>
-            <p className="text-xs text-slate-500">Opiniones descarnadas de alumnos reales contándote lo que los PDFs de folletos omiten.</p>
+            <p className="text-xs text-slate-500">Opiniones descarnadas de alumnos reales sobre aulas, prácticas y empleabilidad.</p>
           </div>
         </div>
         <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm flex gap-4 items-center">
@@ -135,7 +162,7 @@ export default function HomeSection({ cycles, onSelectCycle, onAskAI }: HomeSect
           </div>
           <div>
             <h3 className="text-sm font-bold text-slate-900">Salarios Reales Transparentes</h3>
-            <p className="text-xs text-slate-500">Datos contrastados del mercado laboral de España para evitar expectativas falsas.</p>
+            <p className="text-xs text-slate-500">Rangos iniciales orientativos para comparar sin humo ni promesas infladas.</p>
           </div>
         </div>
       </div>
@@ -340,11 +367,11 @@ export default function HomeSection({ cycles, onSelectCycle, onAskAI }: HomeSect
             <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider block">Fichas técnicas y honestas</span>
             <h2 className="text-xl font-extrabold text-slate-950">Ciclos de FP Destacados</h2>
           </div>
-          <span className="text-xs text-slate-500">Haz clic para explorar más</span>
+          <span className="text-xs text-slate-500">{popularCycles.length} itinerarios destacados · haz clic para explorar</span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" id="popular-cycles-list">
-          {cycles.filter(c => c.isPopular).map((cycle) => (
+          {popularCycles.map((cycle) => (
             <div
               key={cycle.id}
               onClick={() => onSelectCycle(cycle.code)}
@@ -373,6 +400,11 @@ export default function HomeSection({ cycles, onSelectCycle, onAskAI }: HomeSect
                 <p className="text-xs text-slate-600 leading-relaxed line-clamp-2">
                   {cycle.description}
                 </p>
+
+                <div className="flex flex-wrap gap-1 pt-1">
+                  <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">{cycle.satisfactionRate}/10 satisfacción</span>
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700">{cycle.difficultyScore}/10 dificultad</span>
+                </div>
               </div>
 
               <div className="flex items-center justify-between border-t border-slate-100 pt-3 mt-4">
