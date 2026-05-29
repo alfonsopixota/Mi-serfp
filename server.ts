@@ -8,6 +8,9 @@ dotenv.config();
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
+const CHAT_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+const CHAT_RATE_LIMIT_MAX_REQUESTS = 30;
+const chatRequestLog = new Map<string, number[]>();
 
 // Initialize Google GenAI client if key is available
 let ai: GoogleGenAI | null = null;
@@ -31,11 +34,28 @@ try {
 }
 
 app.use(express.json({ limit: "64kb" }));
+app.set("trust proxy", 1);
 
 // API: Handle Chat with SerFP AI Orientador
 app.post("/api/chat", async (req, res) => {
   try {
     const { message, history } = req.body;
+
+    const clientKey = req.ip || req.socket.remoteAddress || "unknown";
+    const now = Date.now();
+    const recentRequests = (chatRequestLog.get(clientKey) || []).filter(
+      (timestamp) => now - timestamp < CHAT_RATE_LIMIT_WINDOW_MS,
+    );
+
+    if (recentRequests.length >= CHAT_RATE_LIMIT_MAX_REQUESTS) {
+      chatRequestLog.set(clientKey, recentRequests);
+      return res.status(429).json({
+        error: "Demasiadas solicitudes. Inténtalo de nuevo en unos minutos.",
+      });
+    }
+
+    recentRequests.push(now);
+    chatRequestLog.set(clientKey, recentRequests);
 
     if (typeof message !== "string" || !message.trim()) {
       return res.status(400).json({ error: "El mensaje es obligatorio" });
@@ -86,18 +106,18 @@ app.post("/api/chat", async (req, res) => {
 function generateUnbiasedFallbackResponse(message: string): string {
   const m = message.toLowerCase();
   if (m.includes("informát") || m.includes("dam") || m.includes("daw") || m.includes("asir") || m.includes("program")) {
-    return "La familia de Informática y Comunicaciones (especialmente DAM, DAW y ASIR) tiene casi un 90% de empleabilidad. Lo que nadie te cuenta: Requiere muchas horas de autoaprendizaje fuera de clases y tolerancia a la frustración con el código. Las empresas valoran más tu portafolio de proyectos reales que el título en sí. ¿Te interesa el desarrollo web, las aplicaciones o las redes e infraestructura?";
+    return "Informática y Comunicaciones suele tener buena salida laboral, especialmente si construyes proyectos reales fuera del aula. Lo que nadie te cuenta: exige bastante autoaprendizaje y tolerancia a la frustración. ¿Te interesa más desarrollo web, aplicaciones, datos o redes?";
   }
   if (m.includes("sanid") || m.includes("enfermer") || m.includes("odont") || m.includes("higien")) {
-    return "Sanidad es la familia con mayor número de contratos anuales. Grados como Cuidados Auxiliares de Enfermería (TCAE) y Laboratorio Clínico tienen alta demanda inmediata. Lo que nadie te cuenta: Son sectores con alta rotación horaria, turnos cambiantes, gran carga emocional y a veces salarios iniciales ajustados al convenio básico. ¿Te gustaría trabajar de cara al paciente directo o en laboratorio?";
+    return "Sanidad suele tener demanda alta y un entorno muy vocacional, pero también implica turnos, presión y mucha responsabilidad. Si te atrae el trato con personas o el trabajo técnico de laboratorio, puede encajar bien. ¿Te interesa más atención directa o laboratorio?";
   }
   if (m.includes("dual")) {
-    return "La FP Dual es una modalidad donde pasas alrededor del 33% al 50% de las horas formativas trabajando directamente en una empresa colaboradora, recibiendo una beca o contrato de formación. Es genial para ganar experiencia real. Lo que nadie te cuenta: Depende mucho de la calidad de tutorización de la empresa. Algunas te ponen a hacer tareas mecánicas y otras te forman de verdad. Elige centros públicos con buen convenio histórico.";
+    return "La FP Dual combina aula y empresa y puede darte experiencia real antes de acabar el ciclo. La calidad depende mucho del centro y de la empresa: conviene revisar bien cómo tutorizan y qué tareas hacen realmente los alumnos.";
   }
   if (m.includes("universidad") || m.includes("carrera") || m.includes("acceder")) {
-    return "Sí, desde cualquier Grado Superior puedes acceder directamente a la Universidad sin hacer la selectividad (EBAU) general. Tu nota media del ciclo cuenta como nota de acceso. Si necesitas subir nota para carreras competitivas (como Ingeniería o Medicina), puedes presentarte a la parte específica de la selectividad. Además, muchas universidades te convalidan hasta 36 o 48 créditos si la carrera está relacionada con tu ciclo.";
+    return "Desde un Grado Superior puedes acceder a la universidad, aunque para carreras con nota alta puede interesar subir nota por la vía específica. La cantidad de créditos convalidables depende de la universidad y del grado, así que conviene revisarlo caso por caso.";
   }
-  return "¡Hola! Como orientador neutral de SerFP, estoy listo para guiarte sin rodeos comerciales. Cuéntame: ¿prefieres trabajos de oficina (Administración, Tecnología), trabajos activos/de campo (Electricidad, Automoción) o atención a personas (Sanidad, Educación Infantil)? Describe tu situación actual (edad, estudios previos) y te guiaré con transparencia.";
+  return "Puedo ayudarte a comparar familias de FP según tus intereses, tu nota y tu objetivo laboral. Dime si prefieres oficina, tecnología, trabajo de campo o atención a personas, y te orientaré con una recomendación práctica.";
 }
 
 // Setup Vite Dev Server / Static files
