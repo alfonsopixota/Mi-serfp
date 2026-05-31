@@ -1,16 +1,24 @@
 import express from "express";
+import helmet from "helmet";
 import path from "path";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
+import rateLimit from "express-rate-limit";
 import { buildGeminiContents, normalizeChatHistory } from "./src/lib/chat";
 
 dotenv.config();
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
-const CHAT_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
-const CHAT_RATE_LIMIT_MAX_REQUESTS = 30;
-const chatRequestLog = new Map<string, number[]>();
+const chatRateLimit = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  limit: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: "Demasiadas solicitudes. Inténtalo de nuevo en unos minutos.",
+  },
+});
 
 // Initialize Google GenAI client if key is available
 let ai: GoogleGenAI | null = null;
@@ -33,29 +41,22 @@ try {
   console.error("Error initializing GoogleGenAI client:", error);
 }
 
+app.disable("x-powered-by");
+app.use(helmet());
 app.use(express.json({ limit: "64kb" }));
 app.set("trust proxy", 1);
 
+app.get("/healthz", (_req, res) => {
+  res.json({
+    status: "ok",
+    aiConfigured: Boolean(process.env.GEMINI_API_KEY),
+  });
+});
+
 // API: Handle Chat with SerFP AI Orientador
-app.post("/api/chat", async (req, res) => {
+app.post("/api/chat", chatRateLimit, async (req, res) => {
   try {
     const { message, history } = req.body;
-
-    const clientKey = req.ip || req.socket.remoteAddress || "unknown";
-    const now = Date.now();
-    const recentRequests = (chatRequestLog.get(clientKey) || []).filter(
-      (timestamp) => now - timestamp < CHAT_RATE_LIMIT_WINDOW_MS,
-    );
-
-    if (recentRequests.length >= CHAT_RATE_LIMIT_MAX_REQUESTS) {
-      chatRequestLog.set(clientKey, recentRequests);
-      return res.status(429).json({
-        error: "Demasiadas solicitudes. Inténtalo de nuevo en unos minutos.",
-      });
-    }
-
-    recentRequests.push(now);
-    chatRequestLog.set(clientKey, recentRequests);
 
     if (typeof message !== "string" || !message.trim()) {
       return res.status(400).json({ error: "El mensaje es obligatorio" });
